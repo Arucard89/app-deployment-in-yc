@@ -1,0 +1,11 @@
+yc iam service-account create --name terraform-sa
+yc resource-manager folder add-access-binding <folder-id> --role editor --subject serviceAccount:<sa-id>
+yc iam key create \
+  --service-account-id <sa-id> \
+  --folder-name app-stage \
+  --output key.json
+yc config profile create kamerton-terraform-sa
+
+yc config set service-account-key key.json
+yc config set cloud-id <cloud-id>
+yc config set folder-id <folder-id>

@@ -33,6 +33,7 @@
 1. Terraform >= 1.3
 2. Yandex Cloud CLI
 3. Настроенный доступ к Yandex Cloud
+4. https://yandex.cloud/ru/docs/tutorials/infrastructure-management/terraform-quickstart#before-you-begin
 
 ### Установка:
 
@@ -49,7 +50,7 @@ cd postgresql-yandex-infrastructure
 
 export YC_TOKEN=$(yc iam create-token)
 export YC_CLOUD_ID=$(yc config get cloud-id)
-export YC_FOLDER_ID=\$(yc config get folder-id)
+export YC_FOLDER_ID=$(yc config get folder-id)
 
 ```
 

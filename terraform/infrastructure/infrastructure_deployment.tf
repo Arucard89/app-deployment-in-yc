@@ -157,7 +157,10 @@ resource "yandex_compute_instance" "microservices" {
   resources {
     cores  = each.value.cores
     memory = each.value.memory
+    core_fraction = each.value.core_fraction
   }
+
+  platform_id = each.value.platform_id
 
   boot_disk {
     initialize_params {
