@@ -9,38 +9,23 @@ variable "default_zone" {
   default     = "ru-central1-a"
 }
 
-variable "microservices" {
-  description = "Конфигурация микросервисов"
-  type = map(object({
-    cores     = number
-    memory    = number
-    disk_size = number
-    nat_enabled = bool
-  }))
-  default = {
-    frontend = {
-      cores     = 2
-      memory    = 4
-      disk_size = 20
-      nat_enabled = true
-    }
-    api = {
-      cores     = 2
-      memory    = 4
-      disk_size = 20
-      nat_enabled = false
-    }
-    main = {
-      cores     = 2
-      memory    = 4
-      disk_size = 20
-      nat_enabled = false
-    }
-    billing-mail = {
-      cores     = 2
-      memory    = 4
-      disk_size = 30
-      nat_enabled = false
-    }
-  }
+variable "network_id" {
+  description = "ID VPC сети"
+  type        = string
 }
+
+variable "subnet_id" {
+  description = "ID подсети"
+  type        = string
+}
+
+variable "security_group_id" {
+  description = "ID группы безопасности"
+  type        = string
+}
+
+variable "postgresql_ip" {
+  description = "IP адрес PostgreSQL сервера"
+  type        = string
+  default     = ""
+} 

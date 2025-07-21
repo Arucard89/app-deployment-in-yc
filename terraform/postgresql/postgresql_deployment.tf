@@ -132,6 +132,7 @@ resource "yandex_compute_instance" "postgresql" {
   name        = "postgresql-server"
   description = "PostgreSQL 17 server"
   zone        = var.default_zone
+  platform_id = "standard-v2"
   
   resources {
     cores         = 2
@@ -169,7 +170,7 @@ resource "yandex_compute_instance" "postgresql" {
 # Создание скрипта подключения к PostgreSQL
 resource "local_file" "connect_script" {
   filename = "${path.module}/connect_to_postgresql.sh"
-  content = templatefile("${path.module}/connect_script.tpl", {
+  content = templatefile("${path.module}/../templates/connect_script.tpl", {
     postgresql_ip = yandex_compute_instance.postgresql.network_interface.0.ip_address
     ssh_key_path = "postgresql_ssh_key.pem"
   })
@@ -186,7 +187,7 @@ resource "local_file" "postgresql_ssh_private_key" {
 # Создание документации для разработчиков
 resource "local_file" "developer_documentation" {
   filename = "${path.module}/developer_db_access.md"
-  content = templatefile("${path.module}/developer_docs.tpl", {
+  content = templatefile("${path.module}/../templates/developer_docs.tpl", {
     postgresql_ip = yandex_compute_instance.postgresql.network_interface.0.ip_address
     app_user_password = random_password.app_user_password.result
     app_readonly_password = random_password.app_readonly_password.result

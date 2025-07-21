@@ -1,1 +1,21 @@
 key.json
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+
+# SSH ключи
+*.pem
+*.key
+
+# Сгенерированные файлы с реальными данными
+**/connect_to_postgresql.sh
+**/developer_db_access.md
+**/*_deployment_vars.env
+
+# Временные файлы
+*.tmp
+*.bak
