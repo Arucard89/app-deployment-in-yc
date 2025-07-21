@@ -1,0 +1,139 @@
+#cloud-config
+users:
+  - name: ubuntu
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_key}
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - postgresql-17
+  - postgresql-contrib-17
+  - fail2ban
+  - ufw
+  - htop
+  - curl
+  - wget
+  - nginx
+  - certbot
+
+write_files:
+  - path: /etc/postgresql/17/main/postgresql.conf
+    content: |
+      # PostgreSQL configuration for production
+      listen_addresses = '*'
+      port = 5432
+      max_connections = 100
+      shared_buffers = 1536MB
+      effective_cache_size = 4608MB
+      maintenance_work_mem = 384MB
+      checkpoint_completion_target = 0.9
+      wal_buffers = 16MB
+      default_statistics_target = 100
+      random_page_cost = 1.1
+      effective_io_concurrency = 200
+      work_mem = 4MB
+      min_wal_size = 1GB
+      max_wal_size = 4GB
+      max_worker_processes = 2
+      max_parallel_workers_per_gather = 1
+      max_parallel_workers = 2
+      max_parallel_maintenance_workers = 1
+
+      # Logging
+      log_destination = 'stderr'
+      logging_collector = on
+      log_directory = '/var/log/postgresql'
+      log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
+      log_rotation_age = 1d
+      log_rotation_size = 100MB
+      log_min_duration_statement = 1000
+      log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+      log_lock_waits = on
+      log_statement = 'ddl'
+      log_temp_files = 0
+
+  - path: /etc/postgresql/17/main/pg_hba.conf
+    content: |
+      # PostgreSQL Client Authentication Configuration File
+      local   all             postgres                                peer
+      local   all             all                                     peer
+      host    all             all             127.0.0.1/32            md5
+      host    all             all             ::1/128                 md5
+      host    all             all             10.1.0.0/24             md5
+      host    app_db          app_user        10.1.0.0/24             md5
+      host    app_db          app_readonly    10.1.0.0/24             md5
+
+  - path: /etc/fail2ban/jail.local
+    content: |
+      [DEFAULT]
+      bantime = 7200
+      findtime = 300
+      maxretry = 3
+      ignoreip = 127.0.0.1/8 10.1.0.0/24
+
+      [postgresql]
+      enabled = true
+      port = 5432
+      filter = postgresql
+      logpath = /var/log/postgresql/postgresql-*.log
+      maxretry = 3
+      bantime = 7200
+      findtime = 300
+
+      [postgresql-external]
+      enabled = true
+      port = 5432
+      filter = postgresql
+      logpath = /var/log/postgresql/postgresql-*.log
+      maxretry = 2
+      bantime = 14400
+      findtime = 180
+      ignoreip = 10.1.0.0/24
+
+  - path: /etc/setup_postgresql.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -e
+
+      # Остановка PostgreSQL для настройки
+      systemctl stop postgresql
+
+      # Настройка firewall
+      ufw --force enable
+      ufw allow 22/tcp
+      ufw allow from 10.1.0.0/24 to any port 5432
+
+      # Запуск PostgreSQL
+      systemctl start postgresql
+      systemctl enable postgresql
+
+      # Настройка пользователей и базы данных
+      sudo -u postgres psql -c "ALTER USER postgres PASSWORD '${postgres_password}';"
+      sudo -u postgres createdb app_db
+      sudo -u postgres psql -c "CREATE USER app_user WITH PASSWORD '${app_user_password}';"
+      sudo -u postgres psql -c "CREATE USER app_readonly WITH PASSWORD '${app_readonly_password}';"
+      sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE app_db TO app_user;"
+      sudo -u postgres psql -c "GRANT CONNECT ON DATABASE app_db TO app_readonly;"
+      sudo -u postgres psql -d app_db -c "GRANT USAGE ON SCHEMA public TO app_readonly;"
+      sudo -u postgres psql -d app_db -c "GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_readonly;"
+      sudo -u postgres psql -d app_db -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_readonly;"
+
+      # Настройка автоматического backup
+      cat > /etc/cron.d/postgresql-backup << 'EOF'
+      0 2 * * * postgres /usr/local/bin/postgresql_backup.sh
+      EOF
+
+      # Запуск fail2ban
+      systemctl enable fail2ban
+      systemctl start fail2ban
+
+      echo "PostgreSQL setup completed successfully"
+
+runcmd:
+  - chmod +x /etc/setup_postgresql.sh
+  - /etc/setup_postgresql.sh
