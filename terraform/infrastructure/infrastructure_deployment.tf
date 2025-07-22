@@ -108,6 +108,13 @@ resource "yandex_vpc_security_group" "app_sg" {
     to_port        = 65535
   }
 
+  # ICMP доступ (ping)
+  ingress {
+    protocol       = "ICMP"
+    description    = "Allow ICMP (ping) between VPS"
+    v4_cidr_blocks = ["10.1.0.0/24"]
+  }
+
   # Исходящий трафик
   egress {
     protocol       = "ANY"
