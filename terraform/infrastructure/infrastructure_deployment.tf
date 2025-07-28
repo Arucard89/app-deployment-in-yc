@@ -167,8 +167,28 @@ resource "yandex_lockbox_secret_version" "ycr_credentials_version" {
   }
   entries {
     key        = "registry-id"
-    text_value = var.container_registry_id
+    text_value = local.final_registry_id != "" ? local.final_registry_id : var.container_registry_id
   }
+}
+
+# Локальные переменные для логики Container Registry
+locals {
+  # Определяем, нужно ли создавать новый реестр
+  should_create_registry = var.enable_container_registry && var.existing_container_registry_id == ""
+  
+  # Получаем финальный ID реестра (существующий или новосозданный)
+  final_registry_id = var.enable_container_registry ? (
+    var.existing_container_registry_id != "" ? 
+    var.existing_container_registry_id : 
+    (local.should_create_registry ? yandex_container_registry.app_registry[0].id : "")
+  ) : ""
+}
+
+# Создание Container Registry только если не используется существующий
+resource "yandex_container_registry" "app_registry" {
+  count     = local.should_create_registry ? 1 : 0
+  name      = var.container_registry_name
+  folder_id = var.folder_id
 }
 
 # Получение образа Ubuntu
@@ -275,4 +295,20 @@ output "container_deployment_status" {
 output "container_image" {
   value = var.container_image
   description = "Образ контейнера для развертывания"
+}
+
+# Выходные переменные Container Registry
+output "container_registry_id" {
+  value       = local.final_registry_id != "" ? local.final_registry_id : null
+  description = "ID of created or used Container Registry"
+}
+
+output "container_registry_url" {
+  value       = local.final_registry_id != "" ? "cr.yandex/${local.final_registry_id}" : null
+  description = "Full URL of Container Registry for docker push/pull"
+}
+
+output "container_registry_name" {
+  value       = var.enable_container_registry ? var.container_registry_name : null
+  description = "Name of Container Registry"
 }

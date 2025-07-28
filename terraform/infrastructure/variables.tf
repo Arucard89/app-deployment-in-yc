@@ -85,3 +85,21 @@ variable "enable_container_deployment" {
   type        = bool
   default     = false
 }
+
+variable "enable_container_registry" {
+  description = "Create Yandex Container Registry"
+  type        = bool
+  default     = false
+}
+
+variable "container_registry_name" {
+  description = "Name of Container Registry"
+  type        = string
+  default     = "app-registry"
+}
+
+variable "existing_container_registry_id" {
+  description = "ID of existing Container Registry (if empty, new registry will be created)"
+  type        = string
+  default     = ""
+}
