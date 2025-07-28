@@ -142,6 +142,35 @@ resource "yandex_resourcemanager_folder_iam_member" "microservices_sa_lockbox_vi
   member    = "serviceAccount:${yandex_iam_service_account.microservices_sa.id}"
 }
 
+# Дополнительные роли для работы с Container Registry
+resource "yandex_resourcemanager_folder_iam_member" "microservices_sa_container_puller" {
+  count     = var.enable_container_deployment ? 1 : 0
+  folder_id = var.folder_id
+  role      = "container-registry.images.puller"
+  member    = "serviceAccount:${yandex_iam_service_account.microservices_sa.id}"
+}
+
+# Создание секрета в Lockbox для IAM токена
+resource "yandex_lockbox_secret" "ycr_credentials" {
+  count       = var.enable_container_deployment && var.ycr_iam_token != "" ? 1 : 0
+  name        = "ycr-iam-token-${local.timestamp}"
+  description = "IAM токен для доступа к Yandex Container Registry"
+}
+
+# Версия секрета с IAM токеном
+resource "yandex_lockbox_secret_version" "ycr_credentials_version" {
+  count     = var.enable_container_deployment && var.ycr_iam_token != "" ? 1 : 0
+  secret_id = yandex_lockbox_secret.ycr_credentials[0].id
+  entries {
+    key        = "iam-token"
+    text_value = var.ycr_iam_token
+  }
+  entries {
+    key        = "registry-id"
+    text_value = var.container_registry_id
+  }
+}
+
 # Получение образа Ubuntu
 data "yandex_compute_image" "ubuntu" {
   family = "ubuntu-2204-lts"
@@ -187,6 +216,10 @@ resource "yandex_compute_instance" "microservices" {
     ssh-keys = "ubuntu:${tls_private_key.ssh_key.public_key_openssh}"
     user-data = templatefile("${path.module}/cloud-init.yaml", {
       ssh_key = tls_private_key.ssh_key.public_key_openssh
+      enable_container_deployment = var.enable_container_deployment
+      container_image = var.container_image
+      app_port = var.app_port
+      lockbox_secret_id = var.enable_container_deployment && var.ycr_iam_token != "" ? yandex_lockbox_secret.ycr_credentials[0].id : ""
     })
   }
 
@@ -226,4 +259,20 @@ output "microservices_ips" {
 output "ssh_private_key" {
   value = tls_private_key.ssh_key.private_key_pem
   sensitive = true
+}
+
+# Outputs для Lockbox и Container Registry
+output "lockbox_secret_id" {
+  value = var.enable_container_deployment && var.ycr_iam_token != "" ? yandex_lockbox_secret.ycr_credentials[0].id : null
+  description = "ID секрета в Yandex Lockbox с IAM токеном для YCR"
+}
+
+output "container_deployment_status" {
+  value = var.enable_container_deployment ? "enabled" : "disabled"
+  description = "Статус автоматического развертывания контейнеров"
+}
+
+output "container_image" {
+  value = var.container_image
+  description = "Образ контейнера для развертывания"
 }

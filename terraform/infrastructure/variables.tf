@@ -54,3 +54,34 @@ variable "microservices" {
     }
   }
 }
+
+variable "container_registry_id" {
+  description = "ID Container Registry в Yandex Cloud"
+  type        = string
+  default     = ""
+}
+
+variable "container_image" {
+  description = "Полный путь к образу контейнера (cr.yandex/<registry-id>/<repo-name>:<tag>)"
+  type        = string
+  default     = ""
+}
+
+variable "ycr_iam_token" {
+  description = "IAM токен для доступа к Yandex Container Registry (будет сохранен в Lockbox)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "app_port" {
+  description = "Порт приложения внутри контейнера"
+  type        = number
+  default     = 8080
+}
+
+variable "enable_container_deployment" {
+  description = "Включить автоматическое развертывание контейнера"
+  type        = bool
+  default     = false
+}

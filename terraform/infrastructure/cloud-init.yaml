@@ -18,6 +18,7 @@ packages:
   - curl
   - wget
   - unzip
+  - jq
 
 runcmd:
   - systemctl enable docker
@@ -29,3 +30,109 @@ runcmd:
   - ufw allow 22/tcp
   - ufw allow 80/tcp
   - ufw allow 443/tcp
+%{ if enable_container_deployment && container_image != "" && lockbox_secret_id != "" ~}
+  - |
+    # Функция для логирования
+    log() {
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a /var/log/container-deployment.log
+    }
+    
+    log "Начинаем развертывание контейнера из YCR"
+    
+    # Получение токена из метаданных ВМ
+    log "Получаем IAM токен из метаданных ВМ"
+    VM_TOKEN=$(curl -s -H "Metadata-Flavor: Google" \
+      http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token | jq -r .access_token)
+    
+    if [ -z "$VM_TOKEN" ] || [ "$VM_TOKEN" = "null" ]; then
+      log "ОШИБКА: Не удалось получить токен из метаданных ВМ"
+      exit 1
+    fi
+    
+    log "Токен ВМ получен успешно"
+    
+    # Получение секретов из Lockbox
+    log "Получаем секреты из Lockbox (ID: ${lockbox_secret_id})"
+    LOCKBOX_RESPONSE=$(curl -s -H "Authorization: Bearer $VM_TOKEN" \
+      "https://payload.lockbox.api.cloud.yandex.net/lockbox/v1/secrets/${lockbox_secret_id}/payload")
+    
+    if [ $? -ne 0 ]; then
+      log "ОШИБКА: Не удалось подключиться к Lockbox API"
+      exit 1
+    fi
+    
+    # Извлечение IAM токена из ответа Lockbox
+    IAM_TOKEN=$(echo "$LOCKBOX_RESPONSE" | jq -r '.entries[] | select(.key=="iam-token") | .textValue')
+    REGISTRY_ID=$(echo "$LOCKBOX_RESPONSE" | jq -r '.entries[] | select(.key=="registry-id") | .textValue')
+    
+    if [ -z "$IAM_TOKEN" ] || [ "$IAM_TOKEN" = "null" ]; then
+      log "ОШИБКА: Не удалось извлечь IAM токен из Lockbox"
+      exit 1
+    fi
+    
+    log "IAM токен для YCR получен успешно"
+    
+    # Аутентификация в Yandex Container Registry
+    log "Выполняем аутентификацию в Yandex Container Registry"
+    echo "$IAM_TOKEN" | docker login --username iam --password-stdin cr.yandex
+    
+    if [ $? -ne 0 ]; then
+      log "ОШИБКА: Не удалось аутентифицироваться в YCR"
+      exit 1
+    fi
+    
+    log "Аутентификация в YCR выполнена успешно"
+    
+    # Скачивание образа контейнера
+    log "Скачиваем образ: ${container_image}"
+    docker pull ${container_image}
+    
+    if [ $? -ne 0 ]; then
+      log "ОШИБКА: Не удалось скачать образ ${container_image}"
+      exit 1
+    fi
+    
+    log "Образ ${container_image} скачан успешно"
+    
+    # Остановка существующего контейнера (если есть)
+    if docker ps -a --format "table {{.Names}}" | grep -q "^myapp$"; then
+      log "Останавливаем существующий контейнер myapp"
+      docker stop myapp || true
+      docker rm myapp || true
+    fi
+    
+    # Запуск нового контейнера
+    log "Запускаем контейнер myapp"
+    docker run -d \
+      --name myapp \
+      -p 80:${app_port} \
+      --restart unless-stopped \
+      --log-driver json-file \
+      --log-opt max-size=10m \
+      --log-opt max-file=3 \
+      ${container_image}
+    
+    if [ $? -eq 0 ]; then
+      log "Контейнер myapp запущен успешно"
+      log "Приложение доступно на порту 80"
+      
+      # Проверка статуса контейнера
+      sleep 5
+      if docker ps --filter "name=myapp" --filter "status=running" | grep -q myapp; then
+        log "Контейнер работает корректно"
+      else
+        log "ПРЕДУПРЕЖДЕНИЕ: Контейнер может работать некорректно"
+        docker logs myapp | tail -20 | while read line; do log "Container Log: $line"; done
+      fi
+    else
+      log "ОШИБКА: Не удалось запустить контейнер"
+      exit 1
+    fi
+    
+    # Очистка токенов из памяти
+    unset VM_TOKEN IAM_TOKEN LOCKBOX_RESPONSE
+    
+    log "Развертывание контейнера завершено успешно"
+%{ else ~}
+  - echo "Развертывание контейнера отключено или не настроено"
+%{ endif ~}
