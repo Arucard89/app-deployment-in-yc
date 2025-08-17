@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test App - Hello World</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            padding: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .emoji {
+            font-size: 2rem;
+            margin: 0 10px;
+        }
+
+        .timestamp {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎉 Hello World! 🚀</h1>
+        <p>
+            <span class="emoji">🐳</span>
+            Тестовое приложение успешно развернуто в Yandex Cloud
+            <span class="emoji">☁️</span>
+        </p>
+
+        <div class="info">
+            <h3>🔍 Информация о системе</h3>
+            <p><strong>Сервер:</strong> Nginx</p>
+            <p><strong>Контейнер:</strong> Docker</p>
+            <p><strong>Платформа:</strong> Yandex Cloud</p>
+            <p><strong>Архитектура:</strong> x86_64</p>
+        </div>
+
+        <div class="timestamp">
+            <p>Время загрузки: <span id="loadTime"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Показать время загрузки страницы
+        document.getElementById('loadTime').textContent = new Date().toLocaleString('ru-RU');
+
+        // Простая анимация при загрузке
+        document.querySelector('.container').style.opacity = '0';
+        document.querySelector('.container').style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            document.querySelector('.container').style.transition = 'all 0.5s ease';
+            document.querySelector('.container').style.opacity = '1';
+            document.querySelector('.container').style.transform = 'translateY(0)';
+        }, 100);
+    </script>
+</body>
+
+</html>
