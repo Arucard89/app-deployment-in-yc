@@ -16,21 +16,44 @@ provider "yandex" {
 
 # Локальные переменные для удобства
 locals {
-  timestamp = formatdate("YYYY-MM-DD-hhmm", timestamp())
-  network_name = "app-network"
-  subnet_name = "app-subnet"
+  # Стандартные метки
+  timestamp           = formatdate("YYYY-MM-DD-hhmm", timestamp())
+  network_name        = "app-network"
+  subnet_name         = "app-subnet"
   security_group_name = "app-security-group"
-  nat_gateway_name = "app-nat-gateway"
-  route_table_name = "app-route-table"
+  nat_gateway_name    = "app-nat-gateway"
+  route_table_name    = "app-route-table"
+
+  # Если переменная `existing_network_id` задана, используем уже созданную сеть
+  use_existing_network = var.existing_network_id != ""
+
+  # Итоговый ID сети (созданной в рамках apply либо существующей)
+  effective_network_id = local.use_existing_network ? var.existing_network_id : yandex_vpc_network.app_network[0].id
   
+  # ----- Подсеть -----
+  use_existing_subnet   = var.existing_subnet_id != ""
+  effective_subnet_id   = local.use_existing_subnet ? var.existing_subnet_id : yandex_vpc_subnet.app_subnet[0].id
+
+  # ----- NAT Gateway -----
+  use_existing_nat_gateway = var.existing_nat_gateway_id != ""
+  effective_nat_gateway_id = local.use_existing_nat_gateway ? var.existing_nat_gateway_id : yandex_vpc_gateway.nat_gateway[0].id
+
+  # ----- Route table -----
+  use_existing_route_table = var.existing_route_table_id != ""
+  effective_route_table_id = local.use_existing_route_table ? var.existing_route_table_id : yandex_vpc_route_table.app_route_table[0].id
+
+  # ----- Security group -----
+  use_existing_security_group = var.existing_security_group_id != ""
+  effective_security_group_id = local.use_existing_security_group ? var.existing_security_group_id : yandex_vpc_security_group.app_sg[0].id
+ 
   # Сохранение переменных в файл
   deployment_vars = {
     timestamp = local.timestamp
-    network_id = yandex_vpc_network.app_network.id
-    subnet_id = yandex_vpc_subnet.app_subnet.id
-    security_group_id = yandex_vpc_security_group.app_sg.id
-    nat_gateway_id = yandex_vpc_gateway.nat_gateway.id
-    route_table_id = yandex_vpc_route_table.app_route_table.id
+    network_id = local.effective_network_id
+    subnet_id = local.effective_subnet_id
+    security_group_id = local.effective_security_group_id
+    nat_gateway_id = local.effective_nat_gateway_id
+    route_table_id = local.effective_route_table_id
     microservices_ips = {
       for key, instance in yandex_compute_instance.microservices : key => instance.network_interface.0.ip_address
     }
@@ -39,41 +62,47 @@ locals {
 
 # Создание VPC сети
 resource "yandex_vpc_network" "app_network" {
-  name = local.network_name
+  # Если сеть уже есть — пропускаем создание.
+  count       = local.use_existing_network ? 0 : 1
+  name        = local.network_name
   description = "App network for microservices"
 }
 
 # Создание подсети
 resource "yandex_vpc_subnet" "app_subnet" {
+  count          = local.use_existing_subnet ? 0 : 1
   name           = local.subnet_name
   zone           = var.default_zone
-  network_id     = yandex_vpc_network.app_network.id
+  network_id     = local.effective_network_id
   v4_cidr_blocks = ["10.1.0.0/24"]
-  route_table_id = yandex_vpc_route_table.app_route_table.id
+  route_table_id = local.effective_route_table_id
 }
 
 # Создание NAT Gateway
 resource "yandex_vpc_gateway" "nat_gateway" {
+  count = local.use_existing_nat_gateway ? 0 : 1
   name = local.nat_gateway_name
   shared_egress_gateway {}
 }
 
 # Создание таблицы маршрутизации для NAT Gateway
 resource "yandex_vpc_route_table" "app_route_table" {
+  count       = local.use_existing_route_table ? 0 : 1
   name       = local.route_table_name
-  network_id = yandex_vpc_network.app_network.id
+  network_id = local.effective_network_id
 
   static_route {
     destination_prefix = "0.0.0.0/0"
-    gateway_id         = yandex_vpc_gateway.nat_gateway.id
+    gateway_id         = local.effective_nat_gateway_id
   }
 }
 
 # Создание группы безопасности
 resource "yandex_vpc_security_group" "app_sg" {
+  count       = local.use_existing_security_group ? 0 : 1
   name        = local.security_group_name
   description = "Security group for app microservices"
-  network_id  = yandex_vpc_network.app_network.id
+  network_id  = local.effective_network_id
 
   # SSH доступ
   ingress {
@@ -178,9 +207,9 @@ resource "yandex_compute_instance" "microservices" {
   }
 
   network_interface {
-    subnet_id          = yandex_vpc_subnet.app_subnet.id
+    subnet_id          = local.effective_subnet_id
     nat                = each.value.nat_enabled
-    security_group_ids = [yandex_vpc_security_group.app_sg.id]
+    security_group_ids = [local.effective_security_group_id]
   }
 
   metadata = {
@@ -203,15 +232,15 @@ resource "local_file" "deployment_vars" {
 
 # Вывод информации
 output "network_id" {
-  value = yandex_vpc_network.app_network.id
+  value = local.effective_network_id
 }
 
 output "subnet_id" {
-  value = yandex_vpc_subnet.app_subnet.id
+  value = local.effective_subnet_id
 }
 
 output "security_group_id" {
-  value = yandex_vpc_security_group.app_sg.id
+  value = local.effective_security_group_id
 }
 
 output "microservices_ips" {

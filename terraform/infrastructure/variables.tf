@@ -54,3 +54,40 @@ variable "microservices" {
     }
   }
 }
+
+# Опционально укажите ID уже существующей VPC-сети.  
+# Если значение непустое, Terraform пропустит создание новой сети и будет  
+# использовать указанную.
+variable "existing_network_id" {
+  description = "ID существующей VPC сети, которую нужно использовать вместо создания новой."
+  type        = string
+  default     = ""
+}
+
+# Опциональный ID существующей подсети
+variable "existing_subnet_id" {
+  description = "ID существующей подсети, если не нужно создавать новую."
+  type        = string
+  default     = ""
+}
+
+# Опциональный ID существующего NAT Gateway
+variable "existing_nat_gateway_id" {
+  description = "ID существующего NAT Gateway, если не нужно создавать новый."
+  type        = string
+  default     = ""
+}
+
+# Опционционный ID существующей таблицы маршрутизации
+variable "existing_route_table_id" {
+  description = "ID существующей таблицы маршрутизации, если не нужно создавать новую."
+  type        = string
+  default     = ""
+}
+
+# Опционционный ID существующей группы безопасности
+variable "existing_security_group_id" {
+  description = "ID существующей VPC security group, если не нужно создавать новую."
+  type        = string
+  default     = ""
+}
