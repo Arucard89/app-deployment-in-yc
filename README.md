@@ -55,12 +55,17 @@ export YC_FOLDER_ID=$(yc config get folder-id)
 
 ```
 
+2a. **Развернуть бакет для хранения стейта tf**
+
+См. инструкцию в директории state_bucket
+
 3. **Развертывание базовой инфраструктуры:**
 
 ```
 
 cd infrastructure
-terraform init
+terraform init \
+-backend-config="secret_key=<secret из lockbox для аккаунта, под которым происходит развертывание>"
 terraform plan -var="folder_id=$YC_FOLDER_ID"
 terraform apply -var="folder_id=$YC_FOLDER_ID"
 
@@ -71,7 +76,8 @@ terraform apply -var="folder_id=$YC_FOLDER_ID"
 ```
 
 cd ../postgresql
-terraform init
+terraform init \
+-backend-config="secret_key=<secret из lockbox для аккаунта, под которым происходит развертывание>"
 terraform plan -var="folder_id=\$YC_FOLDER_ID" -var="network_id=<network_id>" -var="subnet_id=<subnet_id>" -var="security_group_id=<security_group_id>"
 terraform apply
 
