@@ -171,6 +171,13 @@ resource "yandex_resourcemanager_folder_iam_member" "microservices_sa_lockbox_vi
   member    = "serviceAccount:${yandex_iam_service_account.microservices_sa.id}"
 }
 
+# Разрешение вытягивать образы из YCR
+resource "yandex_resourcemanager_folder_iam_member" "microservices_sa_cr_puller" {
+  folder_id = var.folder_id
+  role      = "container-registry.images.puller"
+  member    = "serviceAccount:${yandex_iam_service_account.microservices_sa.id}"
+}
+
 # Получение образа Ubuntu
 data "yandex_compute_image" "ubuntu" {
   family = "ubuntu-2404-lts"
@@ -216,6 +223,8 @@ resource "yandex_compute_instance" "microservices" {
     ssh-keys = "ubuntu:${tls_private_key.ssh_key.public_key_openssh}"
     user-data = templatefile("${path.module}/cloud-init.yaml", {
       ssh_key = tls_private_key.ssh_key.public_key_openssh
+      container_image = each.value.image
+      microservice_name = each.key
     })
   }
 
