@@ -265,3 +265,47 @@ output "ssh_private_key" {
   value = tls_private_key.ssh_key.private_key_pem
   sensitive = true
 }
+
+# -----------------------------
+# Static access key for SA
+# -----------------------------
+resource "yandex_iam_service_account_static_access_key" "microservices_sa_key" {
+  service_account_id = yandex_iam_service_account.microservices_sa.id
+  description        = "Static access key for microservices-sa"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# Lockbox secret to store SA keys and VPS SSH key
+resource "yandex_lockbox_secret" "microservices_sa_secret" {
+  name                = "microservices-sa-keys"
+  description         = "Access keys and SSH key for microservices VPS"
+  deletion_protection = true
+}
+
+# Secret version with keys
+resource "yandex_lockbox_secret_version" "microservices_sa_secret_v1" {
+  secret_id = yandex_lockbox_secret.microservices_sa_secret.id
+
+  entries {
+    key        = "access_key"
+    text_value = yandex_iam_service_account_static_access_key.microservices_sa_key.access_key
+  }
+
+  entries {
+    key        = "secret_key"
+    text_value = yandex_iam_service_account_static_access_key.microservices_sa_key.secret_key
+  }
+
+  entries {
+    key        = "vps_ssh_private_key_pem"
+    text_value = tls_private_key.ssh_key.private_key_pem
+  }
+
+  depends_on = [
+    yandex_iam_service_account_static_access_key.microservices_sa_key,
+    tls_private_key.ssh_key
+  ]
+}

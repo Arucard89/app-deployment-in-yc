@@ -213,3 +213,40 @@ output "postgresql_security_group_id" {
 output "lockbox_secret_id" {
   value = yandex_lockbox_secret.postgresql_secrets.id
 }
+
+# -----------------------------
+# Static access key for PostgreSQL SA
+# -----------------------------
+resource "yandex_iam_service_account_static_access_key" "postgresql_sa_key" {
+  service_account_id = yandex_iam_service_account.postgresql_sa.id
+  description        = "Static access key for postgresql-sa"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# Lockbox secret to store SA keys and SSH key (reuse existing secret or create new)
+resource "yandex_lockbox_secret_version" "postgresql_sa_keys_version" {
+  secret_id = yandex_lockbox_secret.postgresql_secrets.id
+
+  entries {
+    key        = "sa_access_key"
+    text_value = yandex_iam_service_account_static_access_key.postgresql_sa_key.access_key
+  }
+
+  entries {
+    key        = "sa_secret_key"
+    text_value = yandex_iam_service_account_static_access_key.postgresql_sa_key.secret_key
+  }
+
+  entries {
+    key        = "vps_ssh_private_key_pem"
+    text_value = tls_private_key.postgresql_ssh_key.private_key_pem
+  }
+
+  depends_on = [
+    yandex_iam_service_account_static_access_key.postgresql_sa_key,
+    tls_private_key.postgresql_ssh_key
+  ]
+}
