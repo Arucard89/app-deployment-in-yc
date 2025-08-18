@@ -24,40 +24,50 @@ variable "microservices" {
     frontend = {
       cores     = 2
       memory    = 4
-      disk_size = 20
+      disk_size = 33
       nat_enabled = true
       core_fraction = 50
       platform_id = "standard-v2"
-      images = ["frontend:latest"]
+      images = [
+        "frontend:latest", 
+        "hello-world:latest"
+      ]
     }
     api = {
       cores     = 2
       memory    = 4
-      disk_size = 20
-      nat_enabled = false
+      disk_size = 33
+      nat_enabled = true
       core_fraction = 20
       platform_id = "standard-v2"
-      images = ["api:latest"]
+      images = [
+        "api:latest", 
+        "hello-world:latest"
+      ]
     }
     main = {
       cores     = 2
       memory    = 4
-      disk_size = 20
+      disk_size = 33
       core_fraction = 50
-      nat_enabled = false
+      nat_enabled = true
       platform_id = "standard-v2"
-      images = ["main:latest"]
+      images = [
+        "main:latest", 
+        "hello-world:latest"
+      ]
     }
     billing-mail = {
       cores     = 2
       memory    = 4
-      disk_size = 30
-      nat_enabled = false
+      disk_size = 33
+      nat_enabled = true
       core_fraction = 20
       platform_id = "standard-v2"
       images = [
         "billing:latest",
-        "mail:latest"
+        "mail:latest",
+        "hello-world:latest"
       ]
     }
   }
