@@ -28,7 +28,7 @@ variable "microservices" {
       nat_enabled = true
       core_fraction = 50
       platform_id = "standard-v2"
-      images = ["cr.yandex/your-registry/frontend:latest"]
+      images = ["frontend:latest"]
     }
     api = {
       cores     = 2
@@ -37,7 +37,7 @@ variable "microservices" {
       nat_enabled = false
       core_fraction = 20
       platform_id = "standard-v2"
-      images = ["cr.yandex/your-registry/api:latest"]
+      images = ["api:latest"]
     }
     main = {
       cores     = 2
@@ -46,7 +46,7 @@ variable "microservices" {
       core_fraction = 50
       nat_enabled = false
       platform_id = "standard-v2"
-      images = ["cr.yandex/your-registry/main:latest"]
+      images = ["main:latest"]
     }
     billing-mail = {
       cores     = 2
@@ -56,8 +56,8 @@ variable "microservices" {
       core_fraction = 20
       platform_id = "standard-v2"
       images = [
-        "cr.yandex/your-registry/billing:latest",
-        "cr.yandex/your-registry/mail:latest"
+        "billing:latest",
+        "mail:latest"
       ]
     }
   }
@@ -98,4 +98,11 @@ variable "existing_security_group_id" {
   description = "ID существующей VPC security group, если не нужно создавать новую."
   type        = string
   default     = ""
+}
+
+# ID (префикс) Yandex Container Registry, например "cr.yandex/yc-registry-id"
+variable "container_registry_id" {
+  description = "Yandex Container Registry ID (prefix for images)"
+  type        = string
+  default     = "cr.yandex/crpaairn0c60gfdbbqsq"
 }

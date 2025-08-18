@@ -223,7 +223,7 @@ resource "yandex_compute_instance" "microservices" {
     ssh-keys = "ubuntu:${tls_private_key.ssh_key.public_key_openssh}"
     user-data = templatefile("${path.module}/cloud-init.yaml", {
       ssh_key = tls_private_key.ssh_key.public_key_openssh
-      container_images = join(",", each.value.images)
+      container_images = join(",", [for img in each.value.images : "${var.container_registry_id}/${img}"])
       microservice_name = each.key
     })
   }
