@@ -29,14 +29,21 @@ runcmd:
   - ufw allow 22/tcp
   - ufw allow 80/tcp
   - ufw allow 443/tcp
-  # Запуск микросервиса из Yandex Container Registry
+  # Запуск одного или нескольких контейнеров из Yandex Container Registry
   - |
-    # Логин в YCR (предполагается, что у ВМ есть роль images.puller)
-    echo "Pulling image ${container_image}"
-    docker pull ${container_image}
-    # Останавливаем предыдущий контейнер, если есть
-    if docker ps -a --format '{{.Names}}' | grep -q "^${microservice_name}$"; then
-      docker rm -f ${microservice_name}
+    # Остановить и удалить все ранее запущенные контейнеры
+    if [ "$(docker ps -aq)" ]; then
+      echo "Stopping all existing containers"
+      docker rm -f $(docker ps -aq)
     fi
-    # Запуск контейнера
-    docker run -d --name ${microservice_name} --restart unless-stopped -p 80:80 ${container_image}
+
+    # Логин в YCR (предполагается, что у ВМ есть роль images.puller)
+    IFS=',' read -ra imgs <<< "${container_images}"
+    idx=0
+    for img in "${imgs[@]}"; do
+      echo "Pulling image $img"
+      docker pull "$img"
+      cname="${microservice_name}-${idx}"
+      docker run -d --name "$cname" --restart unless-stopped "$img"
+      idx=$((idx+1))
+    done

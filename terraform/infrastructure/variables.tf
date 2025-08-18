@@ -18,7 +18,7 @@ variable "microservices" {
     core_fraction = number
     nat_enabled = bool
     platform_id = string
-    image = string
+    images = list(string)
   }))
   default = {
     frontend = {
@@ -28,7 +28,7 @@ variable "microservices" {
       nat_enabled = true
       core_fraction = 50
       platform_id = "standard-v2"
-      image = "cr.yandex/your-registry/frontend:latest"
+      images = ["cr.yandex/your-registry/frontend:latest"]
     }
     api = {
       cores     = 2
@@ -37,7 +37,7 @@ variable "microservices" {
       nat_enabled = false
       core_fraction = 20
       platform_id = "standard-v2"
-      image = "cr.yandex/your-registry/api:latest"
+      images = ["cr.yandex/your-registry/api:latest"]
     }
     main = {
       cores     = 2
@@ -46,7 +46,7 @@ variable "microservices" {
       core_fraction = 50
       nat_enabled = false
       platform_id = "standard-v2"
-      image = "cr.yandex/your-registry/main:latest"
+      images = ["cr.yandex/your-registry/main:latest"]
     }
     billing-mail = {
       cores     = 2
@@ -55,7 +55,10 @@ variable "microservices" {
       nat_enabled = false
       core_fraction = 20
       platform_id = "standard-v2"
-      image = "cr.yandex/your-registry/billing-mail:latest"
+      images = [
+        "cr.yandex/your-registry/billing:latest",
+        "cr.yandex/your-registry/mail:latest"
+      ]
     }
   }
 }
