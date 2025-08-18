@@ -173,7 +173,7 @@ resource "yandex_resourcemanager_folder_iam_member" "microservices_sa_lockbox_vi
 
 # Получение образа Ubuntu
 data "yandex_compute_image" "ubuntu" {
-  family = "ubuntu-2204-lts"
+  family = "ubuntu-2404-lts"
 }
 
 # Создание SSH ключей
