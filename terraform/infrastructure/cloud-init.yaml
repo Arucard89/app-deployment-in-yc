@@ -40,10 +40,10 @@ runcmd:
     # Логин в YCR (предполагается, что у ВМ есть роль images.puller)
     IFS=',' read -ra imgs <<< "${container_images}"
     idx=0
-    for img in "${imgs[@]}"; do
+    for img in "$${imgs[@]}"; do
       echo "Pulling image $img"
       docker pull "$img"
-      cname="${microservice_name}-${idx}"
+      cname="${microservice_name}-$${idx}"
       docker run -d --name "$cname" --restart unless-stopped "$img"
       idx=$((idx+1))
     done
