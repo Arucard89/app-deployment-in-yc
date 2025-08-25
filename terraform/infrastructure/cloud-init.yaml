@@ -1,4 +1,8 @@
 #cloud-config
+datasource:
+  Ec2:
+    strict_id: false
+
 users:
   - name: ubuntu
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
