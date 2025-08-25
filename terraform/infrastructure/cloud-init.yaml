@@ -12,8 +12,6 @@ package_upgrade: true
 packages:
   - docker.io
   - docker-compose
-  - fail2ban
-  - ufw
   - htop
   - curl
   - wget
@@ -22,28 +20,24 @@ packages:
 runcmd:
   - systemctl enable docker
   - systemctl start docker
+  - getent group docker || groupadd docker # Создать группу docker, если не существует
   - usermod -aG docker ubuntu
-  - systemctl enable fail2ban
-  - systemctl start fail2ban
-  - ufw --force enable
-  - ufw allow 22/tcp
-  - ufw allow 80/tcp
-  - ufw allow 443/tcp
+  # Внимание: безопасность и доступ к портам обеспечиваются только через security groups Yandex Cloud
   # Запуск одного или нескольких контейнеров из Yandex Container Registry
   - |
-    # Остановить и удалить все ранее запущенные контейнеры
+    set -e  # Прерывать выполнение при ошибке
+    echo "container_images: ${container_images}"
+    echo "microservice_name: ${microservice_name}"
+
+     # Логин в YCR (предполагается, что у ВМ есть роль images.puller)
+    echo "Pulling image ${container_image}"
+    docker pull ${container_image}
+
+    # Останавливаем все предыдущие контейнеры, если есть
     if [ "$(docker ps -aq)" ]; then
       echo "Stopping all existing containers"
       docker rm -f $(docker ps -aq)
     fi
+    # Запуск контейнера
 
-    # Логин в YCR (предполагается, что у ВМ есть роль images.puller)
-    IFS=',' read -ra imgs <<< "${container_images}"
-    idx=0
-    for img in "$${imgs[@]}"; do
-      echo "Pulling image $img"
-      docker pull "$img"
-      cname="${microservice_name}-$${idx}"
-      docker run -d --name "$cname" --restart unless-stopped "$img"
-      idx=$((idx+1))
-    done
+    docker run -d --name ${microservice_name} --restart unless-stopped -p 80:80 ${container_image}
