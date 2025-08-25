@@ -36,7 +36,7 @@ variable "microservices" {
     api = {
       cores     = 2
       memory    = 4
-      disk_size = 33
+      disk_size = 20
       nat_enabled = true
       core_fraction = 20
       platform_id = "standard-v2"
